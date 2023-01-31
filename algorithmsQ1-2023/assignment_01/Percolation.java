@@ -7,11 +7,14 @@ public class Percolation {
     private int openSites;
     private final Site[][] grid;
     private final WeightedQuickUnionUF qf;
-    private final Site[] tops;
     private final Site[] botts;
-    private final boolean[] statusFull;
+    private final boolean[] fullSites;
 
     private static class Site {
+
+        public static final String FULL_LABEL = "0 ";
+        public static final String BLOCKED_LABEL = "X ";
+        public static final String EMPTY_LABEL = "_ ";
         private boolean empty;
         boolean open;
         int id;
@@ -45,17 +48,6 @@ public class Percolation {
         public void doFill() {
             this.empty = false;
         }
-
-        @Override
-        public String toString() {
-            if (isBlocked()) {
-                return "B ";
-            }
-            if (isEmpty()) {
-                return "_ ";
-            }
-            return "0 ";
-        }
     }
 
     // creates n-by-n grid, with all sites initially blocked
@@ -65,9 +57,8 @@ public class Percolation {
         this.n = n;
         int nSqr = n * n;
         this.qf = new WeightedQuickUnionUF(nSqr);
-        this.tops = getRow(0);
         this.botts = getRow(n-1);
-        this.statusFull = new boolean[nSqr];
+        this.fullSites = new boolean[nSqr];
     }
 
     private Site[] getRow(int row) {
@@ -113,16 +104,21 @@ public class Percolation {
         StringBuilder sb = new StringBuilder();
         for (Site[] sites : grid) {
             for (Site site : sites) {
-                if(site.isBlocked()) {
-                    sb.append("X ");
-                } else {
-                    sb.append(statusFull[qf.find(site.id)] ? "0 " : "_ ");
-                }
+                sb.append(calculateSiteLabel(site));
             }
             sb.append("\n");
         }
         sb.append("\n");
         return sb.toString();
+    }
+
+    private String calculateSiteLabel(Site site) {
+        if(site.isBlocked()) {
+            return Site.BLOCKED_LABEL;
+        }
+        return fullSites[qf.find(site.id)]
+            ? Site.FULL_LABEL
+            : Site.EMPTY_LABEL;
     }
 
     final static int[][] NEIGHBORS = {
@@ -137,12 +133,14 @@ public class Percolation {
         // any open site on the top will be filled
         if (r == 0) {
             site.doFill();
+            fullSites[site.id] = true;
             for (int[] nCoord : NEIGHBORS) {
                 Site neighbor = getSite(r + nCoord[0], c + nCoord[1]);
                 if (neighbor != null && neighbor.isOpen()) {
                     qf.union(site.id, neighbor.id);
+                    fullSites[qf.find(neighbor.id)] = true;
+                    fullSites[neighbor.id] = true;
                     neighbor.doFill();
-                    statusFull[qf.find(site.id)] = true;
                 }
             }
         } else {
@@ -153,7 +151,9 @@ public class Percolation {
                     if(site.isFull() || neighbor.isFull()) {
                         site.doFill();
                         neighbor.doFill();
-                        statusFull[qf.find(site.id)] = true;
+                        fullSites[qf.find(site.id)] = true;
+                        fullSites[site.id] = true;
+                        fullSites[neighbor.id] = true;
                     }
                 }
             }
@@ -199,11 +199,9 @@ public class Percolation {
 
     // does the system percolate?
     public boolean percolates() {
-        for (Site top: this.tops) {
-            for (Site bott : this.botts) {
-                if(qf.find(top.id) == qf.find(bott.id)) {
-                    return true;
-                }
+        for (Site bott : this.botts) {
+            if(fullSites[qf.find(bott.id)]) {
+                return true;
             }
         }
         return false;
