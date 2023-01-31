@@ -2,12 +2,14 @@ import edu.princeton.cs.algs4.WeightedQuickUnionUF;
 
 public class Percolation {
 
+    private static final boolean DEBUG = false;
     private final int n;
     private int openSites;
     private final Site[][] grid;
     private final WeightedQuickUnionUF qf;
     private final Site[] tops;
     private final Site[] botts;
+    private final boolean[] statusFull;
 
     private static class Site {
         private boolean empty;
@@ -43,6 +45,17 @@ public class Percolation {
         public void doFill() {
             this.empty = false;
         }
+
+        @Override
+        public String toString() {
+            if (isBlocked()) {
+                return "B ";
+            }
+            if (isEmpty()) {
+                return "_ ";
+            }
+            return "0 ";
+        }
     }
 
     // creates n-by-n grid, with all sites initially blocked
@@ -50,9 +63,11 @@ public class Percolation {
         Percolation.validateN(n);
         this.grid = Percolation.buildGrid(n);
         this.n = n;
-        this.qf = new WeightedQuickUnionUF(n*n);
+        int nSqr = n * n;
+        this.qf = new WeightedQuickUnionUF(nSqr);
         this.tops = getRow(0);
         this.botts = getRow(n-1);
+        this.statusFull = new boolean[nSqr];
     }
 
     private Site[] getRow(int row) {
@@ -87,7 +102,27 @@ public class Percolation {
         if(site.isBlocked()) {
             processOpening(site, r, c);
             ++this.openSites;
+            if (Percolation.DEBUG) {
+                System.out.println(this);
+            }
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Site[] sites : grid) {
+            for (Site site : sites) {
+                if(site.isBlocked()) {
+                    sb.append("X ");
+                } else {
+                    sb.append(statusFull[qf.find(site.id)] ? "0 " : "_ ");
+                }
+            }
+            sb.append("\n");
+        }
+        sb.append("\n");
+        return sb.toString();
     }
 
     final static int[][] NEIGHBORS = {
@@ -107,17 +142,19 @@ public class Percolation {
                 if (neighbor != null && neighbor.isOpen()) {
                     qf.union(site.id, neighbor.id);
                     neighbor.doFill();
+                    statusFull[qf.find(site.id)] = true;
                 }
             }
         } else {
             for (int[] nCoord : NEIGHBORS) {
                 Site neighbor = getSite(r + nCoord[0], c + nCoord[1]);
                 if (neighbor != null && neighbor.isOpen()) {
+                    qf.union(site.id, neighbor.id);
                     if(site.isFull() || neighbor.isFull()) {
                         site.doFill();
                         neighbor.doFill();
+                        statusFull[qf.find(site.id)] = true;
                     }
-                    qf.union(site.id, neighbor.id);
                 }
             }
         }

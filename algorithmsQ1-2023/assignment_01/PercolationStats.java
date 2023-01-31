@@ -19,8 +19,9 @@ public class PercolationStats {
         int nSqr = n * n;
         for (int i = 0; i < trials; ++i) {
             Percolation percolation = new Percolation(n);
+            int id;
             while (!percolation.percolates()) {
-                int id = StdRandom.uniformInt(nSqr);
+                id = StdRandom.uniformInt(nSqr);
                 percolation.open((id / n) + 1, (id % n) + 1);
             }
             fracs[i] = (percolation.numberOfOpenSites() * 1.0) / (n * n * 1.0);
