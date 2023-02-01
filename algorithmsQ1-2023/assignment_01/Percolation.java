@@ -102,7 +102,8 @@ public class Percolation {
         int rN = r + nCoord[0];
         int cN = c + nCoord[1];
         int neighborId = (r + nCoord[0]) * n + c + nCoord[1];
-        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN) && this.emptySites[neighborId]) {
+        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN)
+            && this.emptySites[neighborId] && qf.find(siteId) != qf.find(neighborId)) {
           qf.union(siteId, neighborId);
           parentId = qf.find(neighborId);
           fullSites[parentId] = true;
@@ -118,7 +119,8 @@ public class Percolation {
         int rN = r + nCoord[0];
         int cN = c + nCoord[1];
         int neighborId = rN * n + cN;
-        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN) && this.emptySites[neighborId]) {
+        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN)
+            && this.emptySites[neighborId] && qf.find(siteId) != qf.find(neighborId)) {
           qf.union(siteId, neighborId);
           if (fullSites[siteId] || fullSites[neighborId]) {
             parentId = qf.find(neighborId);
