@@ -31,6 +31,7 @@ public class PercolationStats {
       fracs[i] = (percolation.numberOfOpenSites() * 1.0) / (n * n * 1.0);
       if (DEBUG) {
         StdOut.println(percolation);
+        // PercolationVisualizer.reportCriticalSite(id / n, id % n);
         // PercolationVisualizer.draw(percolation, n);
       }
     }

@@ -42,9 +42,9 @@ public class Percolation {
     int siteId = r * n + c;
     if (isBlocked(siteId)) {
       processOpening(siteId, r, c);
+      reviewPercolation();
       ++this.openSites;
     }
-    reviewPercolation();
   }
 
   private boolean isBlocked(int siteId) {
@@ -94,53 +94,64 @@ public class Percolation {
     }
     int[][] neighbors = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
     this.emptySites[siteId] = true;
-    // any open site on the top will be filled
     if (r == 0) {
-      int parentId = -1;
-      fullSites[siteId] = true;
-      for (int[] nCoord : neighbors) {
-        int rN = r + nCoord[0];
-        int cN = c + nCoord[1];
-        int neighborId = (r + nCoord[0]) * n + c + nCoord[1];
-        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN)
-            && this.emptySites[neighborId] && qf.find(siteId) != qf.find(neighborId)) {
-          qf.union(siteId, neighborId);
-          parentId = qf.find(neighborId);
-          fullSites[parentId] = true;
-          fullSites[neighborId] = true;
-        }
-      }
-      if (parentId > -1) {
-        fillAll(parentId);
-      }
+      // any open site on the top will be filled
+      processOpenTop(siteId, c, neighbors);
     } else {
-      int parentId = -1;
-      for (int[] nCoord : neighbors) {
-        int rN = r + nCoord[0];
-        int cN = c + nCoord[1];
-        int neighborId = rN * n + cN;
-        if (!invalidInput(this.n, rN) && !invalidInput(this.n, cN)
-            && this.emptySites[neighborId] && qf.find(siteId) != qf.find(neighborId)) {
-          qf.union(siteId, neighborId);
-          if (fullSites[siteId] || fullSites[neighborId]) {
-            parentId = qf.find(neighborId);
-            fullSites[parentId] = true;
-            fullSites[siteId] = true;
-            fullSites[neighborId] = true;
-            // fill = true;
-          }
-        }
-      }
-      if (parentId > -1) {
-        fillAll(parentId);
-      }
+      processOpenOthers(siteId, r, c, neighbors);
     }
     if (DEBUG) {
       StdOut.println(this);
     }
   }
 
-  private void fillAll(int parentId) {
+  private void processOpenOthers(int siteId, int r, int c, int[][] neighbors) {
+    int parentId = -1;
+    for (int[] nCoord : neighbors) {
+      int rN = r + nCoord[0], cN = c + nCoord[1];
+      if (validSite(rN, cN)) {
+        int neighborId = rN * n + cN;
+        if (this.emptySites[neighborId]) {
+          qf.union(siteId, neighborId);
+          if (fullSites[siteId] || fullSites[neighborId]) {
+            parentId = qf.find(neighborId);
+            fullSites[parentId] = true;
+            fullSites[siteId] = true;
+            fullSites[neighborId] = true;
+          }
+        }
+      }
+    }
+    if (parentId > -1) {
+      fillAllChildren(parentId);
+    }
+  }
+
+  private void processOpenTop(int siteId, int col, int[][] neighbors) {
+    int parentId = -1;
+    fullSites[siteId] = true;
+    for (int[] nCoord : neighbors) {
+      int nCol = col + nCoord[1];
+      if (validSite(nCoord[0], nCol)) {
+        int neighborId = nCoord[0] * n + nCol;
+        if (this.emptySites[neighborId]) {
+          qf.union(siteId, neighborId);
+          parentId = qf.find(neighborId);
+          fullSites[parentId] = true;
+          fullSites[neighborId] = true;
+        }
+      }
+    }
+    if (parentId > -1) {
+      fillAllChildren(parentId);
+    }
+  }
+
+  private boolean validSite(int rN, int cN) {
+    return !invalidInput(this.n, rN) && !invalidInput(this.n, cN);
+  }
+
+  private void fillAllChildren(int parentId) {
     for (int i = 0; i < nSqr; i++) {
       if (qf.find(i) == parentId) {
         this.fullSites[i] = true;
@@ -177,7 +188,7 @@ public class Percolation {
     int r = row - 1;
     int c = col - 1;
     validateArguments(n, r, c);
-    return this.fullSites[qf.find(r * n + c)];
+    return this.fullSites[r * n + c];
   }
 
   // returns the number of open sites

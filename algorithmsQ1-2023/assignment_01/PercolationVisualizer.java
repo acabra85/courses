@@ -23,12 +23,19 @@ TAKEN FROM https://www.cs.princeton.edu/courses/archive/spring22/cos226/assignme
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdDraw;
 
+import java.awt.Color;
 import java.awt.Font;
 
 public class PercolationVisualizer {
 
   // delay in milliseconds (controls animation speed)
   private static final int DELAY = 0;
+  private static final int[] critiSite = {-1, -1};
+
+  static void reportCriticalSite(int r, int c) {
+    critiSite[0] = r;
+    critiSite[1] = c;
+  }
 
   // draw n-by-n percolation system
   public static void draw(Percolation percolation, int n) {
@@ -41,18 +48,12 @@ public class PercolationVisualizer {
     // draw n-by-n grid
     for (int row = 0; row < n; row++) {
       for (int col = 0; col < n; col++) {
-        if (percolation.isFull(row+1, col+1)) {
-          StdDraw.setPenColor(StdDraw.BOOK_LIGHT_BLUE);
-        }
-        else if (percolation.isOpen(row+1, col+1)) {
-          StdDraw.setPenColor(StdDraw.WHITE);
-        }
-        else {
-          StdDraw.setPenColor(StdDraw.BLACK);
-        }
-        StdDraw.filledSquare(col + 0.5, n - row - 0.5, 0.45);
+        fillColoredSite(n, row, col, generateCellColor(percolation, row, col));
       }
     }
+
+    // Mark critical site
+    attemptMarkCriticalSite(n);
 
     // write status text
     StdDraw.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -61,6 +62,27 @@ public class PercolationVisualizer {
     if (percolation.percolates()) StdDraw.text(0.75 * n, -0.025 * n, "percolates");
     else StdDraw.text(0.75 * n, -0.025 * n, "does not percolate");
 
+  }
+
+  private static void attemptMarkCriticalSite(int n) {
+    if(critiSite[0] >= 0 && critiSite[1] >=0) {
+      fillColoredSite(n, critiSite[0], critiSite[1], StdDraw.RED);
+    }
+  }
+
+  private static void fillColoredSite(int n, int row, int col, Color color) {
+    StdDraw.setPenColor(color);
+    StdDraw.filledSquare(col + 0.5, n - row - 0.5, 0.45);
+  }
+
+  private static Color generateCellColor(Percolation percolation, int row, int col) {
+    if (percolation.isFull(row +1, col +1)) {
+      return StdDraw.BOOK_LIGHT_BLUE;
+    }
+    else if (percolation.isOpen(row +1, col +1)) {
+      return StdDraw.WHITE;
+    }
+    return StdDraw.BLACK;
   }
 
   private static void simulateFromFile(String filename) {
