@@ -8,8 +8,9 @@
  *
  ******************************************************************************/
 
-import java.util.Comparator;
 import edu.princeton.cs.algs4.StdDraw;
+import edu.princeton.cs.algs4.StdOut;
+import java.util.Comparator;
 
 public class Point implements Comparable<Point> {
 
@@ -60,6 +61,20 @@ public class Point implements Comparable<Point> {
    */
   public double slopeTo(Point that) {
     /* YOUR CODE HERE */
+    if(that == null) {
+      throw new IllegalStateException("that point is null");
+    }
+    if (this.compareTo(that) == 0) {
+      return Double.NEGATIVE_INFINITY;
+    }
+    if (x == that.x) {
+      return Double.POSITIVE_INFINITY;
+    }
+    return (that.y - y) / (1.0 * (that.x - x)) ;
+  }
+
+  private boolean hasEqualComps(Point that) {
+    return that != null && x == that.x && y == that.y;
   }
 
   /**
@@ -76,6 +91,13 @@ public class Point implements Comparable<Point> {
    */
   public int compareTo(Point that) {
     /* YOUR CODE HERE */
+    if (this == that || hasEqualComps(that)) {
+      return 0;
+    }
+    if (y < that.y || (x < that.x && y == that.y)) {
+      return -1;
+    }
+    return 1;
   }
 
   /**
@@ -86,6 +108,7 @@ public class Point implements Comparable<Point> {
    */
   public Comparator<Point> slopeOrder() {
     /* YOUR CODE HERE */
+    return (a, b) -> a.compareTo(b);
   }
 
 
@@ -105,6 +128,21 @@ public class Point implements Comparable<Point> {
    * Unit tests the Point data type.
    */
   public static void main(String[] args) {
-    /* YOUR CODE HERE */
+    Point point1 = new Point(0, 0);
+    Point point2 = new Point(0, 0);
+    Point point3 = new Point(1, 2);
+    print("True{%s}", point1.hasEqualComps(point2));
+    print("True{%s}", point1.hasEqualComps(point1));
+    print("False{%s}", point1.hasEqualComps(point3));
+    print("0{%s}", point1.compareTo(point2));
+    print("0{%s}", point1.compareTo(point1));
+    print("-1{%s}", point1.compareTo(point3));
+    print("-1{%s}", point2.compareTo(point3));
+    print("-1{%s}", point2.compareTo(point3));
+    point3.drawTo(point1);
+  }
+
+  private static void print(String s, Object... val) {
+    StdOut.println(String.format(s, val));
   }
 }
