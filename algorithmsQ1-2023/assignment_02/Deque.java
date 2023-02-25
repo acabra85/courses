@@ -1,5 +1,6 @@
 import edu.princeton.cs.algs4.StdOut;
 
+import java.util.ArrayDeque;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 
@@ -39,6 +40,7 @@ public class Deque<Item> implements Iterable<Item> {
     private int actualSize;
     private DequeItem<Item> first = null;
     private DequeItem<Item> last = null;
+    private long opId = Long.MIN_VALUE;
 
     // construct an empty deque
     public Deque() {
@@ -80,6 +82,7 @@ public class Deque<Item> implements Iterable<Item> {
             this.first.setNext(tmp);
             tmp.setPrev(this.first);
         }
+        ++this.opId;
         ++this.actualSize;
     }
 
@@ -96,6 +99,7 @@ public class Deque<Item> implements Iterable<Item> {
             this.last.setPrev(tmp);
             tmp.setNext(this.last);
         }
+        ++this.opId;
         ++this.actualSize;
     }
 
@@ -108,6 +112,7 @@ public class Deque<Item> implements Iterable<Item> {
             this.first.setPrev(null);
         }
         removed.setNext(null);
+        ++this.opId;
         --this.actualSize;
         return removed.item;
     }
@@ -122,13 +127,15 @@ public class Deque<Item> implements Iterable<Item> {
         }
         removed.setPrev(null);
         --this.actualSize;
+        ++this.opId;
         return removed.item;
     }
 
     // return an iterator over items in order from front to back
     public Iterator<Item> iterator() {
         return new Iterator<Item>() {
-            DequeItem<Item> curr = DequeItem.startIterator(Deque.this.first);
+            private DequeItem<Item> curr = DequeItem.startIterator(Deque.this.first);
+            private final long refOpId = Deque.this.opId;
 
             @Override
             public boolean hasNext() {
@@ -137,7 +144,9 @@ public class Deque<Item> implements Iterable<Item> {
 
             @Override
             public Item next() {
-                if (!hasNext()) {
+                if (this.refOpId != Deque.this.opId) {
+                    throw new IllegalStateException("Object list modified");
+                } else if (!hasNext()) {
                     throw new NoSuchElementException("No More Elements");
                 }
                 DequeItem<Item> ref = curr.next;
@@ -201,6 +210,18 @@ public class Deque<Item> implements Iterable<Item> {
         } catch (NoSuchElementException nse) {
             StdOut.println("Queue is Empty [" + nse.getMessage());
         }
+
+        q = new Deque<>();
+        q.addFirst(1);
+        Iterator<Integer> iterator1 = q.iterator();
+        q.removeFirst();
+       // StdOut.println(iterator1.next());
+
+        ArrayDeque<Integer> a = new ArrayDeque<>();
+        a.addFirst(1);
+        Iterator<Integer> iterator2 = a.iterator();
+        a.removeFirst();
+        iterator2.next();
 
     }
 }
