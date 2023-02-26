@@ -7,12 +7,11 @@ import java.util.List;
 
 public class BruteCollinearPoints {
 
-  private static final int SCALE_DRAW_HI = 32768;
   private final LineSegment[] lineSegments;
 
   public BruteCollinearPoints(Point[] points) {
     assertNonNull(points);
-    lineSegments = BruteCollinearPoints.findSegments(new SegControl(), points);
+    lineSegments = BruteCollinearPoints.findSegments(points);
   }
 
   private static void assertNonNull(Point[] points) {
@@ -26,7 +25,8 @@ public class BruteCollinearPoints {
     }
   }
 
-  private static LineSegment[] findSegments(SegControl sc, Point[] pointsX) {
+  private static LineSegment[] findSegments(Point[] pointsX) {
+    final List<Point[]> control = new ArrayList<>();
     int n = pointsX.length;
     if (n <= 0) {
       return new LineSegment[0];
@@ -54,14 +54,14 @@ public class BruteCollinearPoints {
             }
             double slopeL = points[i].slopeTo(points[ldx]);
             if (ldx != i && Double.compare(slopeIK, slopeL) == 0) {
-              sc.addIfAbsent(points[min(i, min(j, min(k, ldx)))],
+              addIfAbsent(control, points[min(i, min(j, min(k, ldx)))],
                   points[max(i, max(j, max(k, ldx)))]);
             }
           }
         }
       }
     }
-    return sc.getUniqueLineSegments();
+    return getUniqueLineSegments(control);
   }
 
   private static void assertUniqueValues(Point[] points, int size) {
@@ -153,8 +153,8 @@ public class BruteCollinearPoints {
 
     // draw the points
     StdDraw.enableDoubleBuffering();
-    StdDraw.setXscale(0, SCALE_DRAW_HI);
-    StdDraw.setYscale(0, SCALE_DRAW_HI);
+    // StdDraw.setXscale(0, SCALE_DRAW_HI);
+    // StdDraw.setYscale(0, SCALE_DRAW_HI);
     for (Point p : points) {
       p.draw();
     }
@@ -169,50 +169,27 @@ public class BruteCollinearPoints {
     StdDraw.show();
   }
 
-  private static void print(String str, Object... args) {
-    StdOut.print(String.format(str + "%n", args));
+  private static void addIfAbsent(List<Point[]> control, Point a, Point b) {
+    Point[] sci = {a, b};
+    if (control.stream().noneMatch(e -> identical(e, sci))) {
+      control.add(sci);
+    }
   }
 
-  private class SegControl {
+  private static boolean identical(Point[] a, Point[] e) {
+    return a[0].compareTo(e[0]) == 0 && a[1].compareTo(e[1]) == 0;
+  }
 
-    private final List<SegControlItem> control;
-
-    private SegControl() {
-      this.control = new ArrayList<>();
+  private static LineSegment[] getUniqueLineSegments(List<Point[]> control) {
+    final LineSegment[] resp = new LineSegment[control.size()];
+    for (int i = 0; i < control.size(); ++i) {
+      Point[] segment = control.get(i);
+      resp[i] = new LineSegment(segment[0], segment[1]);
     }
+    return resp;
+  }
 
-    private void addIfAbsent(Point a, Point b) {
-      SegControlItem sci = new SegControlItem(a, b);
-      if (control.stream().noneMatch(sci::identical)) {
-        this.control.add(sci);
-      }
-    }
-
-    private LineSegment[] getUniqueLineSegments() {
-      final LineSegment[] resp = new LineSegment[control.size()];
-      for (int i = 0; i < control.size(); ++i) {
-        resp[i] = control.get(i).toLineSegment();
-      }
-      return resp;
-    }
-
-    private class SegControlItem {
-
-      final Point a;
-      final Point b;
-
-      private SegControlItem(Point a1, Point b1) {
-        this.a = a1;
-        this.b = b1;
-      }
-
-      private LineSegment toLineSegment() {
-        return new LineSegment(this.a, this.b);
-      }
-
-      private boolean identical(SegControlItem e) {
-        return a.compareTo(e.a) == 0 && b.compareTo(e.b) == 0;
-      }
-    }
+  private static void print(String str, Object... args) {
+    StdOut.print(String.format(str + "%n", args));
   }
 }
