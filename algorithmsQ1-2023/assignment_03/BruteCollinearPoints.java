@@ -1,46 +1,62 @@
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdDraw;
 import edu.princeton.cs.algs4.StdOut;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 public class BruteCollinearPoints {
 
+  private static final int SCALE_DRAW_HI = 32768;
   private final LineSegment[] lineSegments;
 
   public BruteCollinearPoints(Point[] points) {
     assertNonNull(points);
-    lineSegments = BruteCollinearPoints.findSegments(points);
+    lineSegments = BruteCollinearPoints.findSegments(new SegControl(), points);
   }
 
   private static void assertNonNull(Point[] points) {
-    if(points == null) throw new IllegalArgumentException("null input");
+    if (points == null) {
+      throw new IllegalArgumentException("null input");
+    }
     for (Point point : points) {
-      if(null == point) {
+      if (null == point) {
         throw new IllegalArgumentException("point is null");
       }
     }
   }
 
-  private static LineSegment[] findSegments(Point[] points) {
-    int N = points.length;
-    if(N < 4) return new LineSegment[0];
-    Arrays.sort(points, (a,b) -> a.compareTo(b));
-    assertUniqueValues(points, N);
-    SegControl sc = SegControl.of();
-    for (int i = 0; i < N; ++i) {
-      for (int j = 0; j < N; ++j) {
-        if(j == i) continue;
-        Double slopeIJ = points[i].slopeTo(points[j]);
-        for (int k = 0; k < N; ++k) {
-          Double slopeIK;
-          if (k == j || k == i || slopeIJ.compareTo(slopeIK = points[i].slopeTo(points[k])) != 0) continue;
-          for (int l = 0; l < N; ++l) {
-            Double slopeL = points[i].slopeTo(points[l]);
-            if (l == k || l == j || l == i || slopeIK.compareTo(slopeL) != 0) continue;
-            sc.addIfAbsent(points[min(i, min(j, min(k, l)))], points[max(i, max(j, max(k, l)))]);
+  private static LineSegment[] findSegments(SegControl sc, Point[] pointsX) {
+    int n = pointsX.length;
+    if (n <= 0) {
+      return new LineSegment[0];
+    }
+    Point[] points = Arrays.copyOf(pointsX, n);
+    Arrays.sort(points, (a, b) -> a.compareTo(b));
+    assertUniqueValues(points, n);
+    for (int i = 0; i < n; ++i) {
+      for (int j = 0; j < n; ++j) {
+        if (j == i) {
+          continue;
+        }
+        double slopeIJ = points[i].slopeTo(points[j]);
+        for (int k = 0; k < n; ++k) {
+          if (k == j || k == i) {
+            continue;
+          }
+          double slopeIK = points[i].slopeTo(points[k]);
+          if (Double.compare(slopeIJ, slopeIK) != 0) {
+            continue;
+          }
+          for (int ldx = 0; ldx < n; ++ldx) {
+            if (ldx == k || ldx == j) {
+              continue;
+            }
+            double slopeL = points[i].slopeTo(points[ldx]);
+            if (ldx != i && Double.compare(slopeIK, slopeL) == 0) {
+              sc.addIfAbsent(points[min(i, min(j, min(k, ldx)))],
+                  points[max(i, max(j, max(k, ldx)))]);
+            }
           }
         }
       }
@@ -48,9 +64,9 @@ public class BruteCollinearPoints {
     return sc.getUniqueLineSegments();
   }
 
-  private static void assertUniqueValues(Point[] points, int N) {
-    for (int i = 1; i < N; ++i) {
-      if(points[i].compareTo(points[i-1]) == 0) {
+  private static void assertUniqueValues(Point[] points, int size) {
+    for (int i = 1; i < size; ++i) {
+      if (points[i].compareTo(points[i - 1]) == 0) {
         throw new IllegalArgumentException("duplicated point: " + points[i]);
       }
     }
@@ -74,21 +90,21 @@ public class BruteCollinearPoints {
 
   public static void main(String... args) {
     Point[] points = {
-            new Point(1,1),
-            new Point(2,3),
-            new Point(3,5),
-            new Point(4,7),
+        new Point(1, 1),
+        new Point(2, 3),
+        new Point(3, 5),
+        new Point(4, 7),
 
-            new Point(0,6),
-            new Point(6,4),
-            new Point(9,3),
+        new Point(0, 6),
+        new Point(6, 4),
+        new Point(9, 3),
 
-            new Point(1,4),
-            new Point(4,1),
+        new Point(1, 4),
+        new Point(4, 1),
 
-            new Point(6,5),
-            new Point(6,3),
-            new Point(6,2),
+        new Point(6, 5),
+        new Point(6, 3),
+        new Point(6, 2),
     };
     BruteCollinearPoints bcp = new BruteCollinearPoints(points);
     print("3[%s]", bcp.numberOfSegments());
@@ -96,27 +112,32 @@ public class BruteCollinearPoints {
       print("seg:[%s]", lineSegment);
     }
 
-    try {
-      new BruteCollinearPoints(null);
-    } catch (IllegalArgumentException iae) {
-      print("input is null: %s", iae.getMessage());
-    }
+    // try {
+    //   BruteCollinearPoints bruteCollinearPoints = new BruteCollinearPoints(null);
+    // } catch (IllegalArgumentException iae) {
+    //   print("input is null: %s", iae.getMessage());
+    // }
 
-    try {
-      Point[] points1 = {new Point(1, 1), null, new Point(2,2)};
-      new BruteCollinearPoints(points1);
-    } catch (IllegalArgumentException iae) {
-      print("point is null: %s", iae.getMessage());
-    }
+    // try {
+    //   Point[] points1 = {new Point(1, 1), null, new Point(2, 2)};
+    //   BruteCollinearPoints bruteCollinearPoints = new BruteCollinearPoints(points1);
+    //   bruteCollinearPoints.segments();
+    // } catch (IllegalArgumentException iae) {
+    //   print("point is null: %s", iae.getMessage());
+    // }
+    //
+    // try {
+    //   Point[] points1 = {new Point(1, 1), new Point(2, 2), new Point(2, 2)};
+    //   BruteCollinearPoints bruteCollinearPoints = new BruteCollinearPoints(points1);
+    //   bruteCollinearPoints.segments();
+    // } catch (IllegalArgumentException iae) {
+    //   print("duplicate point: %s", iae.getMessage());
+    // }
 
-    try {
-      Point[] points1 = {new Point(1, 1), new Point(2, 2), new Point(2,2)};
-      new BruteCollinearPoints(points1);
-    } catch (IllegalArgumentException iae) {
-      print("duplicate point: %s", iae.getMessage());
+    if (args != null && args.length > 0) {
+      // sampleClient("collinear/input8.txt");
+      sampleClient(args);
     }
-
-    sampleClient("collinear/input8.txt");
   }
 
   private static void sampleClient(String... args) {
@@ -132,8 +153,8 @@ public class BruteCollinearPoints {
 
     // draw the points
     StdDraw.enableDoubleBuffering();
-    StdDraw.setXscale(0, 32768);
-    StdDraw.setYscale(0, 32768);
+    StdDraw.setXscale(0, SCALE_DRAW_HI);
+    StdDraw.setYscale(0, SCALE_DRAW_HI);
     for (Point p : points) {
       p.draw();
     }
@@ -152,20 +173,17 @@ public class BruteCollinearPoints {
     StdOut.print(String.format(str + "%n", args));
   }
 
-  private static class SegControl {
+  private class SegControl {
 
     private final List<SegControlItem> control;
 
     private SegControl() {
       this.control = new ArrayList<>();
     }
-    private static SegControl of() {
-      return new SegControl();
-    }
 
     private void addIfAbsent(Point a, Point b) {
       SegControlItem sci = new SegControlItem(a, b);
-      if(control.stream().noneMatch(sci::identical)) {
+      if (control.stream().noneMatch(sci::identical)) {
         this.control.add(sci);
       }
     }
@@ -178,7 +196,8 @@ public class BruteCollinearPoints {
       return resp;
     }
 
-    private static class SegControlItem {
+    private class SegControlItem {
+
       final Point a;
       final Point b;
 
