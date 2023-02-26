@@ -215,7 +215,7 @@ public class Deque<Item> implements Iterable<Item> {
         q.addFirst(1);
         Iterator<Integer> iterator1 = q.iterator();
         q.removeFirst();
-       // StdOut.println(iterator1.next());
+        StdOut.println(iterator1.next());
 
         ArrayDeque<Integer> a = new ArrayDeque<>();
         a.addFirst(1);

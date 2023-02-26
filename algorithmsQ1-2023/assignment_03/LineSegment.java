@@ -13,6 +13,6 @@ public class LineSegment {
   }                       // draws this line segment
 
   public String toString() {
-    return String.format("%s->%s", p, q);
+    return p + "->" + q;
   }                   // string representation
 }

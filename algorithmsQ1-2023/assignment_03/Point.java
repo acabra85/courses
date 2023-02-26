@@ -10,6 +10,7 @@
 
 import edu.princeton.cs.algs4.StdDraw;
 import edu.princeton.cs.algs4.StdOut;
+
 import java.util.Comparator;
 
 public class Point implements Comparable<Point> {
@@ -74,7 +75,7 @@ public class Point implements Comparable<Point> {
   }
 
   private boolean hasEqualComps(Point that) {
-    return that != null && x == that.x && y == that.y;
+    return x == that.x && y == that.y;
   }
 
   /**
@@ -108,7 +109,11 @@ public class Point implements Comparable<Point> {
    */
   public Comparator<Point> slopeOrder() {
     /* YOUR CODE HERE */
-    return (a, b) -> a.compareTo(b);
+    return (p1,p2) -> {
+      double slopeP1 = this.slopeTo(p1);
+      double slopeP2 = this.slopeTo(p2);
+      return slopeP1 < slopeP2 ? -1 : (slopeP2 > slopeP1 ? 1 : 0);
+    };
   }
 
 
@@ -135,7 +140,6 @@ public class Point implements Comparable<Point> {
     print("True{%s}", point1.hasEqualComps(point1));
     print("False{%s}", point1.hasEqualComps(point3));
     print("0{%s}", point1.compareTo(point2));
-    print("0{%s}", point1.compareTo(point1));
     print("-1{%s}", point1.compareTo(point3));
     print("-1{%s}", point2.compareTo(point3));
     print("-1{%s}", point2.compareTo(point3));
