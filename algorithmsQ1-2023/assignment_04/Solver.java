@@ -2,59 +2,65 @@ import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.MinPQ;
 import edu.princeton.cs.algs4.StdOut;
 
-import java.util.*;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Comparator;
 
 public class Solver {
 
-    private final Board initial;
     private final boolean solvable;
-    private final List<Board> solution;
-    private final int solutionCount;
+    private final BoardNode solutionNode;
 
     // find a solution to the initial board (using the A* algorithm)
     public Solver(Board initial) {
-        this.initial = initial;
-        this.solution = new ArrayList<>();
-        Iterable<Board> solution = solution();
-        if (solution != null) {
-            for (Board board : solution) {
-                this.solution.add(board);
-            }
+        if (initial == null) {
+            throw new IllegalArgumentException("Board must not be null");
         }
-        this.solvable = this.solution.size() > 0;
-        this.solutionCount = solvable ? this.solution.size() : -1;
+        this.solutionNode = solving(initial);
+        this.solvable = solutionNode != null;
     }
 
     // is the initial board solvable? (see below)
     public boolean isSolvable() {
-        return solvable || !new Solver(this.initial.twin()).isSolvable();
+        return solvable;
     }
 
     // min number of moves to solve initial board; -1 if unsolvable
     public int moves() {
-        return solutionCount;
+        return this.solutionNode != null ? this.solutionNode.moves : -1;
     }
 
     // sequence of boards in a shortest solution; null if unsolvable
-    public Iterable<Board> solution() {
-        MinPQ<BoardNode> pq = new MinPQ<>((a, b) -> a.priority - b.priority);
-        pq.insert(new BoardNode(this.initial, 0, null));
-        BoardNode node;
-        Set<String> control = new HashSet<>();
-        while (!pq.isEmpty()) {
-            node = pq.delMin();
-            control.add(node.iHash());
-            if (node.board.isGoal()) {
-                return node.buildSolution();
+    private static BoardNode solving(Board initial) {
+        Comparator<BoardNode> comparator = new Comparator<BoardNode>() {
+            @Override
+            public int compare(BoardNode o1, BoardNode o2) {
+                return o1.priority - o2.priority;
             }
-            for (Board neighbor : node.board.neighbors()) {
-                if (!control.contains(neighbor.toString())) {
-                    pq.insert(new BoardNode(neighbor, node.moves + 1, node));
-                }
+        };
+        MinPQ<BoardNode> pq = new MinPQ<>(comparator);
+        MinPQ<BoardNode> pqTwin = new MinPQ<>(comparator);
+        pq.insert(BoardNode.orphan(initial));
+        pqTwin.insert(BoardNode.orphan(initial.twin()));
+        while (true) {
+            if (pq.min().board.isGoal()) {
+                return pq.min();
             }
-
+            if (pqTwin.min().board.isGoal()) {
+                return null;
+            }
+            addNeighbors(pq, pq.delMin());
+            addNeighbors(pqTwin, pqTwin.delMin());
         }
-        return null;
+    }
+
+    private static void addNeighbors(MinPQ<BoardNode> pq, BoardNode node) {
+        Board prevBoard = node.parent != null ? node.parent.board : null;
+        for (Board neighbor : node.board.neighbors()) {
+            if (prevBoard == null || !prevBoard.equals(neighbor)) {
+                pq.insert(BoardNode.withParent(neighbor, node));
+            }
+        }
     }
 
     // test client (see below) {}
@@ -66,7 +72,7 @@ public class Solver {
     }
 
     private static void executeTest(String... args) {
-        if (args.length > 0) {
+        if (args.length > 1) {
             StdOut.println(args[1]);
         }
         In in = new In(args[0]);
@@ -93,6 +99,10 @@ public class Solver {
         }
     }
 
+    public Iterable<Board> solution() {
+        return this.solutionNode != null ? this.solutionNode.buildSolution() : null;
+    }
+
     private static class BoardNode {
         private final Board board;
         private final int moves;
@@ -102,25 +112,25 @@ public class Solver {
         private BoardNode(Board board, int moves, BoardNode parent) {
             this.board = board;
             this.moves = moves;
-            this.priority = moves + board.manhattan();
             this.parent = parent;
+            this.priority = board.manhattan() + moves;
         }
 
-        private String iHash() {
-            return board.toString();
+        public static BoardNode orphan(Board twin) {
+            return new BoardNode(twin, 0, null);
+        }
+
+        public static BoardNode withParent(Board neighbor, BoardNode node) {
+            return new BoardNode(neighbor, node.moves + 1, node);
         }
 
         public Iterable<Board> buildSolution() {
-            List<Board> boards = new ArrayList<>();
-            Stack<BoardNode> stack = new Stack<>();
+            Deque<Board> boards = new ArrayDeque<>();
             BoardNode node = this;
-            stack.push(node);
+            boards.addFirst(node.board);
             while (node.parent != null) {
                 node = node.parent;
-                stack.push(node);
-            }
-            while (!stack.isEmpty()) {
-                boards.add(stack.pop().board);
+                boards.addFirst(node.board);
             }
             return boards;
         }

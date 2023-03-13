@@ -5,17 +5,11 @@ import java.util.List;
 
 public class Board {
 
-    private static final int EMPTY_SPACE = 0;
-
-    private static final int HAMMING_IDX = 0;
-    private static final int MANHATTAN_IDX = 1;
-    private static final int ZERO_R_IDX = 2;
-    private static final int ZERO_C_IDX = 3;
-
     private final int[][] tiles;
-    private final String asString;
-    private final int n;
-    private final int[] distances;
+    private final int hammingDist;
+    private final int manhattanDist;
+    private final int zeroRIdx;
+    private final int zeroCIdx;
 
     // create a board from an n-by-n array of tiles,
     // where tiles[row][col] = tile at (row, col)
@@ -23,64 +17,67 @@ public class Board {
         if (tiles == null || tiles.length == 0) {
             throw new IllegalArgumentException("Tiles must not be null or empty");
         }
-        StringBuilder sb = new StringBuilder();
-        int[] distances = {0, 0, 0, 0};
-        this.tiles = cloneTiles(tiles, tiles.length, sb, distances);
-        this.asString = sb.toString();
-        this.n = tiles.length;
-        this.distances = distances;
+        int[] distances = {0, 0, 0, 0, 0};
+        this.tiles = cloneTiles(tiles, tiles.length, distances);
+        this.hammingDist = distances[0];
+        this.manhattanDist = distances[1];
+        this.zeroRIdx = distances[2];
+        this.zeroCIdx = distances[3];
     }
 
-    private int[][] cloneTiles(int[][] tiles, int r, StringBuilder sb, int[] distances) {
+    private int[][] cloneTiles(int[][] tiles, int r, int[] distances) {
         int[][] cloned = new int[r][r];
         int hamming = 0;
         int manhattan = 0;
-        sb.append(r).append("\n ");
-        int correctIdx = 1;
-        for (int i = 0; i < r; ++i) {
-            for (int j = 0; j < r; ++j, ++correctIdx) {
+        int correctIdx = r * r;
+        for (int i = r - 1; i >= 0; --i) {
+            for (int j = r - 1; j >= 0; --j, --correctIdx) {
                 int value = tiles[i][j];
-                if (value != EMPTY_SPACE) {
+                if (value != 0) {
                     if (value != correctIdx) {
                         hamming++;
                         int targetR = (value - 1) / r;
                         int targetC = (value - 1) % r;
                         manhattan += Math.abs(i - targetR) + Math.abs(j - targetC);
                     }
-                    sb.append(value);
                 } else {
-                    distances[ZERO_R_IDX] = i;
-                    distances[ZERO_C_IDX] = j;
-                    sb.append(" ");
+                    distances[2] = i;
+                    distances[3] = j;
                 }
-                sb.append(" ");
                 cloned[i][j] = value;
             }
-            sb.append("\n ");
         }
-        distances[MANHATTAN_IDX] = manhattan;
-        distances[HAMMING_IDX] = hamming;
+        distances[1] = manhattan;
+        distances[0] = hamming;
         return cloned;
     }
 
     // string representation of this board
     public String toString() {
-        return this.asString;
+        int n = tiles.length;
+        StringBuilder sb = new StringBuilder().append(n).append("\n");
+        for (int i = 0; i < n; ++i) {
+            for (int j = 0; j < n; ++j) {
+                sb.append(tiles[i][j]).append(" ");
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 
     // board dimension n
     public int dimension() {
-        return this.n;
+        return this.tiles.length;
     }
 
     // number of tiles out of place
     public int hamming() {
-        return this.distances[HAMMING_IDX];
+        return hammingDist;
     }
 
     // sum of Manhattan distances between tiles and goal
     public int manhattan() {
-        return this.distances[MANHATTAN_IDX];
+        return this.manhattanDist;
     }
 
     // is this board the goal board?
@@ -90,27 +87,51 @@ public class Board {
 
     // does this board equal y?
     @Override
-    public boolean equals(Object y) {
-        return y != null && Board.class.equals(y.getClass()) && this.asString.equals(y.toString());
+    public boolean equals(Object other) {
+        if (other == null || this.getClass() != other.getClass()) {
+            return false;
+        }
+        if (this == other) {
+            return true;
+        }
+        Board castOther = (Board) other;
+        return this.zeroRIdx == castOther.zeroRIdx
+                && this.zeroCIdx == castOther.zeroCIdx
+                && this.hammingDist == castOther.hammingDist
+                && this.manhattanDist == castOther.manhattanDist
+                && this.tiles.length == castOther.tiles.length
+                && equalContents(this.tiles, castOther.tiles);
+    }
+
+    private static boolean equalContents(int[][] arr, int[][] arr2) {
+        for (int i = 0; i < arr.length; ++i) {
+            for (int j = 0; j < arr.length; ++j) {
+                if (arr[i][j] != arr2[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     // all neighboring boards
     public Iterable<Board> neighbors() {
+        int n = this.tiles.length;
         List<Board> boards = new ArrayList<>();
         // Move zero up
-        if (distances[ZERO_R_IDX] > 0) {
+        if (this.zeroRIdx > 0) {
             boards.add(new Board(moveZeroUp()));
         }
         // Move zero down
-        if (distances[ZERO_R_IDX] < this.n - 1) {
+        if (this.zeroRIdx < n - 1) {
             boards.add(new Board(moveZeroDown()));
         }
         // Move zero left
-        if (distances[ZERO_C_IDX] > 0) {
+        if (this.zeroCIdx > 0) {
             boards.add(new Board(moveZeroLeft()));
         }
         // Move zero right
-        if (distances[ZERO_C_IDX] < this.n - 1) {
+        if (this.zeroCIdx < n - 1) {
             boards.add(new Board(moveZeroRight()));
         }
         return boards;
@@ -119,65 +140,50 @@ public class Board {
     private static int[][] simpleClone(int[][] tiles, int n) {
         int[][] cloned = new int[n][n];
         for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < n; ++j) {
-                cloned[i][j] = tiles[i][j];
-            }
+            cloned[i] = tiles[i].clone();
         }
         return cloned;
     }
 
     private int[][] moveZeroRight() {
-        int[][] other = Board.simpleClone(this.tiles, this.n);
-        int tmpR = tiles[distances[ZERO_R_IDX]][distances[ZERO_C_IDX] + 1];
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX] + 1] = EMPTY_SPACE;
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX]] = tmpR;
+        int[][] other = Board.simpleClone(this.tiles, this.tiles.length);
+        swap(other, this.zeroRIdx, this.zeroCIdx + 1, this.zeroRIdx, this.zeroCIdx);
         return other;
     }
 
     private int[][] moveZeroLeft() {
-        int[][] other = Board.simpleClone(this.tiles, this.n);
-        int tmpR = tiles[distances[ZERO_R_IDX]][distances[ZERO_C_IDX] - 1];
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX] - 1] = EMPTY_SPACE;
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX]] = tmpR;
+        int[][] other = Board.simpleClone(this.tiles, this.tiles.length);
+        swap(other, this.zeroRIdx, this.zeroCIdx - 1, this.zeroRIdx, this.zeroCIdx);
         return other;
     }
 
     private int[][] moveZeroDown() {
-        int[][] other = Board.simpleClone(this.tiles, this.n);
-        int tmpR = tiles[distances[ZERO_R_IDX] + 1][distances[ZERO_C_IDX]];
-        other[distances[ZERO_R_IDX] + 1][distances[ZERO_C_IDX]] = EMPTY_SPACE;
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX]] = tmpR;
+        int[][] other = Board.simpleClone(this.tiles, this.tiles.length);
+        swap(other, this.zeroRIdx + 1, this.zeroCIdx, this.zeroRIdx, this.zeroCIdx);
         return other;
     }
 
     private int[][] moveZeroUp() {
-        int[][] other = Board.simpleClone(this.tiles, this.n);
-        int tmpR = tiles[distances[ZERO_R_IDX] - 1][distances[ZERO_C_IDX]];
-        other[distances[ZERO_R_IDX] - 1][distances[ZERO_C_IDX]] = EMPTY_SPACE;
-        other[distances[ZERO_R_IDX]][distances[ZERO_C_IDX]] = tmpR;
+        int[][] other = Board.simpleClone(this.tiles, this.tiles.length);
+        swap(other, this.zeroRIdx - 1, this.zeroCIdx, this.zeroRIdx, this.zeroCIdx);
         return other;
     }
 
     // a board that is obtained by exchanging any pair of tiles
     public Board twin() {
-        int[][] other = Board.simpleClone(this.tiles, this.n);
-        for (int i = 0; i < n; ++i) {
-            for (int j = 0; j < n; ++j) {
-                if (other[i][j] != EMPTY_SPACE && j + 1 < n && other[i][j + 1] != EMPTY_SPACE) {
-                    int tmp = other[i][j];
-                    other[i][j] = other[i][j + 1];
-                    other[i][j + 1] = tmp;
-                    return new Board(other);
-                }
-                if (other[i][j] != EMPTY_SPACE && i + 1 < n && other[i + 1][j] != EMPTY_SPACE) {
-                    int tmp = other[i][j];
-                    other[i][j] = other[i + 1][j];
-                    other[i + 1][j] = tmp;
-                    return new Board(other);
-                }
-            }
+        int[][] other = Board.simpleClone(this.tiles, this.tiles.length);
+        if (this.zeroRIdx == 0) {
+            swap(other, 1, 0, 1, 1);
+        } else {
+            swap(other, 0, 0, 0, 1);
         }
         return new Board(other);
+    }
+
+    private static void swap(int[][] arr, int i1, int j1, int i2, int j2) {
+        int tmp = arr[i1][j1];
+        arr[i1][j1] = arr[i2][j2];
+        arr[i2][j2] = tmp;
     }
 
     // unit testing (not graded)
@@ -190,6 +196,7 @@ public class Board {
         });
         print("hamming 5 [%d]", board.hamming());
         print("manhattan 10 [%d]", board.manhattan());
+        print("manhattan 3 [%d]", board.dimension());
         print("Board \n%s", board);
 
         for (Board neighbor : board.neighbors()) {
