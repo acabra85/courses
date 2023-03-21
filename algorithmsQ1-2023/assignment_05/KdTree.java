@@ -50,7 +50,8 @@ public class KdTree {
         if (isEmpty()) {
             root.kdNode = new KDNode(p, root.rect);
             ++this.total;
-        } else if (root.kdNode.insert(p)) {
+        } else if (!root.contains(p)) {
+            root.kdNode.insert(p);
             ++this.total;
         }
     }
@@ -88,7 +89,6 @@ public class KdTree {
     private static class KDNode {
         final Point2D point;
         final RectHV rect;
-        final Point2D midPoint;
         final boolean xCoord;
         KDNode right;
         KDNode left;
@@ -97,13 +97,6 @@ public class KdTree {
             this.point = point;
             this.xCoord = xCoord;
             this.rect = rectParent;
-            this.midPoint = KDNode.calculateMidPoint(rectParent);
-        }
-
-        private static Point2D calculateMidPoint(RectHV rectParent) {
-            return new Point2D(
-                    (rectParent.xmin() + rectParent.xmax() ) / 2,
-                    (rectParent.ymin() + rectParent.ymax() ) / 2);
         }
 
         public KDNode(Point2D point, RectHV rect) {
@@ -152,24 +145,20 @@ public class KdTree {
             return (xCoord ? X_COMP : Y_COMP).compare(point, p);
         }
 
-        public boolean insert(Point2D p) {
-            if (!contains(p)) {
-                if (compare(p) > 0) {
-                    if (this.left == null) {
-                        this.left = buildChild(p, buildRectLeft(this.xCoord, p, rect));
-                    } else {
-                        this.left.insert(p);
-                    }
+        public void insert(Point2D p) {
+            if (compare(p) > 0) {
+                if (this.left == null) {
+                    this.left = buildChild(p, buildRectLeft(this.xCoord, point, rect));
                 } else {
-                    if (this.right == null) {
-                        this.right = buildChild(p, buildRectRight(this.xCoord, p, rect));
-                    } else {
-                        this.right.insert(p);
-                    }
+                    this.left.insert(p);
                 }
-                return true;
+            } else {
+                if (this.right == null) {
+                    this.right = buildChild(p, buildRectRight(this.xCoord, point, rect));
+                } else {
+                    this.right.insert(p);
+                }
             }
-            return false;
         }
 
         private KDNode buildChild(Point2D p, RectHV rect) {
@@ -178,6 +167,42 @@ public class KdTree {
 
         public boolean intersects(RectHV rect) {
             return rect.intersects(this.rect);
+        }
+
+        public Candidate nearest(Point2D query, Candidate best) {
+            best.update(query, point);
+            StdOut.println(point);
+            double dleft = left != null ? left.rect.distanceSquaredTo(query) : Double.POSITIVE_INFINITY;
+            double dright = right != null ? right.rect.distanceSquaredTo(query): Double.POSITIVE_INFINITY;
+            if (dleft < dright && dleft < best.dist) {
+                left.nearest(query, best);
+                if (dright < best.dist) {
+                    right.nearest(query, best);
+                }
+            } else if (dright <= dleft && dright < best.dist) {
+                right.nearest(query, best);
+                if (dleft < best.dist) {
+                    left.nearest(query, best);
+                }
+            }
+            return best;
+        }
+    }
+    private static class Candidate {
+        Point2D point;
+        double dist;
+
+        public Candidate(Point2D p, double dist) {
+            this.point = p;
+            this.dist = dist;
+        }
+
+        public void update(Point2D query, Point2D point) {
+            double nDist = query.distanceSquaredTo(point);
+            if (nDist < dist) {
+                this.dist = nDist;
+                this.point = point;
+            }
         }
     }
 
@@ -205,35 +230,8 @@ public class KdTree {
             }
         }
 
-        private Point2D nearest(Point2D p) {
-            MinPQ<KDNode> stack = new MinPQ<>(new Comparator<KDNode>() {
-                @Override
-                public int compare(KDNode a, KDNode b) {
-                    return Double.compare(p.distanceSquaredTo(a.midPoint), p.distanceSquaredTo(b.midPoint));
-                }
-            });
-            stack.insert(this.kdNode);
-            StdOut.println(kdNode.point);
-            double minDist = p.distanceSquaredTo(this.kdNode.point);
-            KDNode kdNode;
-            Point2D x = this.kdNode.point;
-            while (!stack.isEmpty()) {
-                kdNode = stack.delMin();
-                double nDist = p.distanceSquaredTo(kdNode.point);
-                if (nDist < minDist) {
-                    minDist = nDist;
-                    x = kdNode.point;
-                }
-                if (kdNode.left != null && kdNode.left.midPoint.distanceSquaredTo(p) < minDist) {
-                    StdOut.println(kdNode.left.point);
-                    stack.insert(kdNode.left);
-                }
-                if (kdNode.right != null && kdNode.right.midPoint.distanceSquaredTo(p) < minDist) {
-                    StdOut.println(kdNode.right.point);
-                    stack.insert(kdNode.right);
-                }
-            }
-            return x;
+        private Point2D nearest(Point2D query) {
+            return kdNode.nearest(query, new Candidate(kdNode.point, query.distanceSquaredTo(kdNode.point))).point;
         }
 
         public Iterable<Point2D> range(RectHV rect) {
@@ -274,19 +272,6 @@ public class KdTree {
         print("isEmpty false: " + kdTree.isEmpty());
         print("size 5: " + kdTree.size());
         print("----- nearest");
-        /*
-            (0.7, 0.2)
-            (0.5, 0.4)
-            (0.4, 0.7)
-            (0.9, 0.6)
-            (0.2, 0.3)
-
-            (0.7, 0.2)
-            (0.5, 0.4)
-            (0.4, 0.7)
-            (0.9, 0.6)
-            (0.2, 0.3)
-         */
         print("nearest (0.4, 0.7): " + kdTree.nearest(new Point2D(0.51d, 0.78d)));
 
     }
